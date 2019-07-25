@@ -6,6 +6,9 @@ Please follow the instructions on [Retrieving the Access Token](https://www.home
 
 Credits: Thanks to [Rytilahti](https://github.com/rytilahti/python-miio) for all the work.
 
+Development python-miio required:
+`pip install -e git+https://github.com/rytilahti/python-miio.git#egg=python-miio`
+
 ## Features
 
 ### Pedestal Fan
