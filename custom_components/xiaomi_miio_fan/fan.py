@@ -34,6 +34,7 @@ MODEL_FAN_SA1 = 'zhimi.fan.sa1'
 MODEL_FAN_ZA1 = 'zhimi.fan.za1'
 MODEL_FAN_ZA3 = 'zhimi.fan.za3'
 MODEL_FAN_ZA4 = 'zhimi.fan.za4'
+MODEL_FAN_P5 = 'dmaker.fan.p5'
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
@@ -46,6 +47,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
         MODEL_FAN_ZA1,
         MODEL_FAN_ZA3,
         MODEL_FAN_ZA4,
+        MODEL_FAN_P5,
     ]),
 })
 
@@ -63,38 +65,26 @@ ATTR_OSCILLATE = 'oscillate'
 ATTR_BATTERY = 'battery'
 ATTR_BATTERY_CHARGE = 'battery_charge'
 ATTR_BATTERY_STATE = 'battery_state'
-ATTR_AC_POWER = 'ac_power'
+ATTR_POWER = 'power'
 ATTR_DELAY_OFF_COUNTDOWN = 'delay_off_countdown'
 ATTR_ANGLE = 'angle'
-ATTR_DIRECT_SPEED = 'direct_speed'
+ATTR_SPEED = 'speed'
 ATTR_USE_TIME = 'use_time'
 ATTR_BUTTON_PRESSED = 'button_pressed'
 ATTR_SPEED_LEVEL = 'speed_level'
 
 AVAILABLE_ATTRIBUTES_FAN = {
-    ATTR_ANGLE: 'angle',
     ATTR_SPEED: 'speed',
     ATTR_DELAY_OFF_COUNTDOWN: 'delay_off_countdown',
 
-    ATTR_AC_POWER: 'ac_power',
+    ATTR_POWER: 'power',
     ATTR_OSCILLATE: 'oscillate',
-    ATTR_DIRECT_SPEED: 'direct_speed',
-    ATTR_NATURAL_SPEED: 'natural_speed',
+    ATTR_SPEED: 'speed',
     ATTR_CHILD_LOCK: 'child_lock',
     ATTR_BUZZER: 'buzzer',
-    ATTR_LED_BRIGHTNESS: 'led_brightness',
-    ATTR_USE_TIME: 'use_time',
-
-    # Additional properties of version 2 and 3
-    ATTR_TEMPERATURE: 'temperature',
-    ATTR_HUMIDITY: 'humidity',
-    ATTR_BATTERY: 'battery',
-    ATTR_BATTERY_CHARGE: 'battery_charge',
-    ATTR_BUTTON_PRESSED: 'button_pressed',
 
     # Additional properties of version 2
     ATTR_LED: 'led',
-    ATTR_BATTERY_STATE: 'battery_state',
 }
 
 FAN_SPEED_LEVEL1 = 'Level 1'
@@ -210,6 +200,10 @@ async def async_setup_platform(hass, config, async_add_devices,
     elif model in [MODEL_FAN_ZA3, MODEL_FAN_ZA4]:  # FIXME: Can be removed with python-miio 0.4.6
             from miio import Fan
             fan = Fan(host, token, model=MODEL_FAN_ZA1)
+            device = XiaomiFan(name, fan, model, unique_id)
+    elif model == MODEL_FAN_P5:
+            from miio import FanP5
+            fan = FanP5(host, token, model=MODEL_FAN_P5)
             device = XiaomiFan(name, fan, model, unique_id)
     else:
         _LOGGER.error(
@@ -424,7 +418,8 @@ class XiaomiFan(XiaomiGenericDevice):
 
             self._available = True
             self._oscillate = state.oscillate
-            self._natural_mode = (state.natural_speed != 0)
+            # self._natural_mode = (state.natural_speed != 0)
+            self._natural_mode = None
             self._state = state.is_on
 
             if self._natural_mode:
@@ -434,7 +429,7 @@ class XiaomiFan(XiaomiGenericDevice):
                         break
             else:
                 for level, range in FAN_SPEED_LIST.items():
-                    if state.direct_speed in range:
+                    if state.speed in range:
                         self._speed = level
                         break
 
@@ -475,14 +470,9 @@ class XiaomiFan(XiaomiGenericDevice):
         if speed in FAN_SPEED_VALUES:
             speed = FAN_SPEED_VALUES[speed]
 
-        if self._natural_mode:
-            await self._try_command(
-                "Setting fan speed of the miio device failed.",
-                self._device.set_natural_speed, speed)
-        else:
-            await self._try_command(
-                "Setting fan speed of the miio device failed.",
-                self._device.set_direct_speed, speed)
+        await self._try_command(
+            "Setting fan speed of the miio device failed.",
+            self._device.set_speed, speed)
 
     async def async_set_direction(self, direction: str) -> None:
         """Set the direction of the fan."""
